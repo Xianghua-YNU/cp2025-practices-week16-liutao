@@ -12,9 +12,8 @@ dx = 0.01     # 空间步长 (m)
 dt = 0.5      # 时间步长 (s)
 Nx = int(L/dx) + 1  # 空间格点数
 Nt = 2000
+
 # 任务1: 基本热传导模拟
-
-
 def basic_heat_diffusion():
     """任务1: 基本热传导模拟"""
 
@@ -32,8 +31,6 @@ def basic_heat_diffusion():
     return u
 
 # 任务2: 解析解与数值解比较
-
-
 def analytical_solution(n_terms=100):
     """解析解函数"""
     x = np.linspace(0, dx*(Nx-1), Nx)
@@ -47,8 +44,6 @@ def analytical_solution(n_terms=100):
     return s.T
 
 # 任务3: 数值解稳定性分析
-
-
 def stability_analysis():
     """任务3: 数值解稳定性分析"""
     dx = 0.01
@@ -71,8 +66,6 @@ def stability_analysis():
     plot_3d_solution(u, dx, dt, Nt, title='Task 3: Unstable Solution (r>0.5)')
 
 # 任务4: 不同初始条件模拟
-
-
 def different_initial_condition():
     """任务4: 不同初始条件模拟"""
     dx = 0.01
@@ -98,8 +91,6 @@ def different_initial_condition():
     return u
 
 # 任务5: 包含牛顿冷却定律的热传导
-
-
 def heat_diffusion_with_cooling():
     """任务5: 包含牛顿冷却定律的热传导"""
     r = D*dt/(dx**2)
@@ -121,7 +112,6 @@ def heat_diffusion_with_cooling():
     plot_3d_solution(
         u, dx, dt, Nt, title='Task 5: Heat Diffusion with Newton Cooling')
 
-
 def plot_3d_solution(u, dx, dt, Nt, title):
     """Plot 3D surface of temperature distribution"""
     Nx = u.shape[0]
@@ -138,22 +128,21 @@ def plot_3d_solution(u, dx, dt, Nt, title):
     ax.set_title(title)
     plt.show()
 
-
 if __name__ == "__main__":
-    print("=== 铝棒热传导问题参考答案 ===")
-    print("1. 基本热传导模拟")
-    u = basic_heat_diffusion()
-    plot_3d_solution(u, dx, dt, Nt, title='Task 1: Heat Diffusion Solution')
+    print("=== 铝棒热传导问题学生实现 ===")
+    # 1. 基本热传导模拟
+    u_basic = basic_heat_diffusion()
+    plot_3d_solution(u_basic, dx, dt, Nt, title='Task 1: Heat Diffusion Solution')
 
-    print("\n2. 解析解")
-    s = analytical_solution()
-    plot_3d_solution(s, dx, dt, Nt, title='Analytical Solution')
+    # 2. 解析解计算
+    u_analytical = analytical_solution()
+    plot_3d_solution(u_analytical, dx, dt, Nt, title='Analytical Solution')
 
-    print("\n3. 数值解稳定性分析")
+    # 3. 数值解稳定性分析
     stability_analysis()
 
-    print("\n4. 不同初始条件模拟")
-    different_initial_condition()
+    # 4. 不同初始条件模拟
+    u_different = different_initial_condition()
 
-    print("\n5. 包含牛顿冷却定律的热传导")
+    # 5. 包含冷却效应的热传导
     heat_diffusion_with_cooling()
