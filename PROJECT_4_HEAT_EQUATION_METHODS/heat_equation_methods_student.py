@@ -5,6 +5,12 @@
 重要：函数名称必须与参考答案一致！
 """
 
+#!/usr/bin/env python3
+"""
+改进版热传导方程数值解法比较
+符合测试文件要求
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import laplace
@@ -53,7 +59,7 @@ class HeatEquationSolver:
         u0 = np.zeros(self.nx)
         # 设置初始条件（10 <= x <= 11 区域为1）
         u0[(self.x >= 10) & (self.x <= 11)] = 1.0
-        # 应用边界条件（虽然初始条件已经满足，但这里明确设置）
+        # 应用边界条件
         u0[0] = 0.0
         u0[-1] = 0.0
         return u0
@@ -61,14 +67,6 @@ class HeatEquationSolver:
     def solve_explicit(self, dt=0.01, plot_times=None):
         """
         使用显式有限差分法（FTCS）求解。
-        
-        实现步骤:
-        1. 检查稳定性条件
-        2. 初始化解数组和时间
-        3. 时间步进循环
-        4. 使用laplace算子计算空间导数
-        5. 更新解并应用边界条件
-        6. 存储指定时间点的解
         """
         if plot_times is None:
             plot_times = [0, 1, 5, 15, 25]
@@ -83,7 +81,6 @@ class HeatEquationSolver:
         
         # 初始化解数组
         u = self.u_initial.copy()
-        t = 0.0
         nt = int(self.T_final / dt) + 1  # 总时间步数
         
         # 创建结果存储字典
@@ -92,8 +89,8 @@ class HeatEquationSolver:
             'times': [],
             'solutions': [],
             'dt': dt,
-            'r': r,
-            'execution_time': 0.0
+            'stability_parameter': r,
+            'computation_time': 0.0
         }
         
         # 存储初始条件
@@ -130,31 +127,23 @@ class HeatEquationSolver:
             results['solutions'].append(u.copy())
             
         end_time = time.time()
-        results['execution_time'] = end_time - start_time
+        results['computation_time'] = end_time - start_time
         
         return results
     
     def solve_implicit(self, dt=0.1, plot_times=None):
         """
         使用隐式有限差分法（BTCS）求解。
-        
-        实现步骤:
-        1. 计算扩散数 r
-        2. 构建三对角系数矩阵
-        3. 时间步进循环
-        4. 构建右端项
-        5. 求解线性系统
-        6. 更新解并应用边界条件
         """
         if plot_times is None:
             plot_times = [0, 1, 5, 15, 25]
             
         # 计算扩散数 r
         r = self.alpha * dt / (self.dx ** 2)
+        nt = int(self.T_final / dt) + 1  # 总时间步数
         
         # 构建三对角矩阵（内部节点）
         n = self.nx - 2  # 内部节点数
-        nt = int(self.T_final / dt) + 1  # 总时间步数
         
         # 主对角线
         main_diag = np.ones(n) * (1 + 2 * r)
@@ -178,8 +167,8 @@ class HeatEquationSolver:
             'times': [],
             'solutions': [],
             'dt': dt,
-            'r': r,
-            'execution_time': 0.0
+            'stability_parameter': r,
+            'computation_time': 0.0
         }
         
         # 存储初始条件
@@ -218,21 +207,13 @@ class HeatEquationSolver:
             results['solutions'].append(u.copy())
             
         end_time = time.time()
-        results['execution_time'] = end_time - start_time
+        results['computation_time'] = end_time - start_time
         
         return results
     
     def solve_crank_nicolson(self, dt=0.5, plot_times=None):
         """
         使用Crank-Nicolson方法求解。
-        
-        实现步骤:
-        1. 计算扩散数 r
-        2. 构建左端矩阵 A
-        3. 时间步进循环
-        4. 构建右端向量
-        5. 求解线性系统 A * u^{n+1} = rhs
-        6. 更新解并应用边界条件
         """
         if plot_times is None:
             plot_times = [0, 1, 5, 15, 25]
@@ -266,8 +247,8 @@ class HeatEquationSolver:
             'times': [],
             'solutions': [],
             'dt': dt,
-            'r': r,
-            'execution_time': 0.0
+            'stability_parameter': r,
+            'computation_time': 0.0
         }
         
         # 存储初始条件
@@ -308,18 +289,13 @@ class HeatEquationSolver:
             results['solutions'].append(u.copy())
             
         end_time = time.time()
-        results['execution_time'] = end_time - start_time
+        results['computation_time'] = end_time - start_time
         
         return results
     
     def _heat_equation_ode(self, t, u_internal):
         """
         用于solve_ivp方法的ODE系统。
-        
-        实现步骤:
-        1. 重构包含边界条件的完整解
-        2. 使用laplace计算二阶导数
-        3. 返回内部节点的导数
         """
         # 重构完整解向量（包含边界条件）
         u_full = np.zeros(self.nx)
@@ -337,12 +313,6 @@ class HeatEquationSolver:
     def solve_with_solve_ivp(self, method='BDF', plot_times=None):
         """
         使用scipy.integrate.solve_ivp求解。
-        
-        实现步骤:
-        1. 提取内部节点初始条件
-        2. 调用solve_ivp求解ODE系统
-        3. 重构包含边界条件的完整解
-        4. 返回结果
         """
         if plot_times is None:
             plot_times = [0, 1, 5, 15, 25]
@@ -380,8 +350,8 @@ class HeatEquationSolver:
             'times': sol.t.tolist(),
             'solutions': solutions,
             'dt': 'adaptive',
-            'r': 'N/A',
-            'execution_time': end_time - start_time
+            'stability_parameter': 'N/A',
+            'computation_time': end_time - start_time
         }
         
         return results
@@ -390,11 +360,6 @@ class HeatEquationSolver:
                        ivp_method='BDF', plot_times=None):
         """
         比较所有四种数值方法。
-        
-        实现步骤:
-        1. 调用所有四种求解方法
-        2. 记录计算时间和稳定性参数
-        3. 返回比较结果
         """
         if plot_times is None:
             plot_times = [0, 1, 5, 15, 25]
@@ -421,23 +386,11 @@ class HeatEquationSolver:
         print(f"求解solve_ivp方法 ({ivp_method})...")
         results['solve_ivp'] = self.solve_with_solve_ivp(method=ivp_method, plot_times=plot_times)
         
-        # 打印每种方法的计算时间和稳定性参数
-        print("\n方法比较结果:")
-        print("-"*70)
-        print(f"{'方法':<25} | {'时间步长':<10} | {'r值':<10} | {'执行时间(s)':<12} | {'状态'}")
-        print("-"*70)
-        
         return results
     
     def plot_comparison(self, methods_results, save_figure=False, filename='heat_equation_comparison.png'):
         """
         绘制所有方法的比较图。
-        
-        实现步骤:
-        1. 创建2x2子图
-        2. 为每种方法绘制不同时间的解
-        3. 设置图例、标签和标题
-        4. 可选保存图像
         """
         # 获取所有方法的时间点（取第一个方法的时间点作为参考）
         times = methods_results['explicit']['times']
@@ -474,7 +427,7 @@ class HeatEquationSolver:
                         linestyle=linestyles[linestyle_idx],
                         label=f't={closest_time:.1f}s')
             
-            ax.set_title(f"{res['method']}\n(计算时间: {res['execution_time']:.4f}s")
+            ax.set_title(f"{res['method']}\n(计算时间: {res['computation_time']:.4f}s")
             ax.set_xlabel('位置 x')
             ax.set_ylabel('温度 u(x,t)')
             ax.grid(True, alpha=0.3)
@@ -493,12 +446,6 @@ class HeatEquationSolver:
     def analyze_accuracy(self, methods_results, reference_method='solve_ivp'):
         """
         分析不同方法的精度。
-        
-        实现步骤:
-        1. 选择参考解
-        2. 计算其他方法与参考解的误差
-        3. 统计最大误差和平均误差
-        4. 返回分析结果
         """
         # 验证参考方法存在
         if reference_method not in methods_results:
