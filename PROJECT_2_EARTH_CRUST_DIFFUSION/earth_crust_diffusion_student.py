@@ -2,21 +2,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # 物理常数
-D = 0.1  # 热扩散率 (m²/day)
-A = 10.0  # 年平均地表温度 (°C)
-B = 12.0  # 地表温度振幅 (°C)
+D = 0.1      # 热扩散率 (m²/day)
+A = 10.0     # 年平均地表温度 (°C)
+B = 12.0     # 地表温度振幅 (°C)
 TAU = 365.0  # 年周期 (days)
 T_BOTTOM = 11.0  # 20米深处温度 (°C)
 T_INITIAL = 10.0  # 初始温度 (°C)
 DEPTH_MAX = 20.0  # 最大深度 (m)
 
-def solve_earth_crust_diffusion(h=0.1, r=0.1, years=10):
+def solve_earth_crust_diffusion(h=0.1, a=1.0, M=201, years=10):
     """
     求解地壳热扩散方程 (显式差分格式)
     
     参数:
         h (float): 空间步长 (m) [默认0.1m]
-        r (float): 稳定性参数 r = D * dt / h² [默认0.1]
+        a (float): 时间步长比例因子 [默认1.0]
+        M (int): 深度方向网格点数 [默认201]
         years (int): 总模拟年数 [默认10年]
     
     返回:
@@ -24,12 +25,12 @@ def solve_earth_crust_diffusion(h=0.1, r=0.1, years=10):
             - depth_array (ndarray): 深度数组 (m)
             - temperature_matrix (ndarray): 温度矩阵 [depth, time]
     """
-    # 计算时间步长
-    dt = r * h**2 / D
-    print(f"空间步长 h = {h:.3f} m, 时间步长 dt = {dt:.4f} days, 稳定性参数 r = {r:.3f}")
+    # 计算时间步长和稳定性参数
+    dt = h * D / a**2
+    r = D * dt / h**2
+    print(f"空间步长 h = {h:.3f} m, 时间步长 dt = {dt:.4f} days, 稳定性参数 r = {r:.4f}")
     
-    # 计算空间和时间网格参数
-    M = int(DEPTH_MAX / h) + 1  # 深度方向网格点数
+    # 计算时间网格参数
     total_days = years * TAU
     N = int(total_days / dt) + 1  # 时间步数
     
@@ -53,7 +54,7 @@ def solve_earth_crust_diffusion(h=0.1, r=0.1, years=10):
     
     return depth, T
 
-def plot_seasonal_profiles(depth, T, seasons=[80, 172, 265, 355], year=9):
+def plot_seasonal_profiles(depth, T, seasons=[90, 180, 270, 360]):
     """
     绘制季节性温度轮廓
     
@@ -61,124 +62,31 @@ def plot_seasonal_profiles(depth, T, seasons=[80, 172, 265, 355], year=9):
         depth (ndarray): 深度数组
         T (ndarray): 温度矩阵 [depth, time]
         seasons (list): 季节时间点 (一年中的天数)
-        year (int): 选择的年份 (0-based, 0=第一年)
     """
-    # 计算时间步长
-    dt = (years * TAU) / (T.shape[1] - 1)
-    
-    # 选择指定年份的季节时间点
-    seasonal_profiles = []
-    for day in seasons:
-        # 计算该时间点的索引
-        time_idx = int((year * TAU + day) / dt)
-        if time_idx >= T.shape[1]:
-            time_idx = T.shape[1] - 1
-        seasonal_profiles.append(T[:, time_idx])
-    
     # 创建图形
     plt.figure(figsize=(10, 8))
     
     # 绘制各季节的温度轮廓
-    labels = ['Spring (Day 80)', 'Summer (Day 172)', 'Fall (Day 265)', 'Winter (Day 355)']
-    colors = ['g-', 'r-', 'b-', 'c-']
-    
-    for i, profile in enumerate(seasonal_profiles):
-        plt.plot(profile, depth, colors[i], linewidth=2, label=labels[i])
-    
-    # 反转y轴使深度向下为正
-    plt.gca().invert_yaxis()
+    for day in seasons:
+        # 选择第10年对应的索引
+        j = int(day * T.shape[1] / (365 * 10))
+        plt.plot(depth, T[:, j], label=f'Day {day}', linewidth=2)
     
     # 添加标签和标题
-    plt.xlabel('Temperature (°C)', fontsize=12)
-    plt.ylabel('Depth (m)', fontsize=12)
-    plt.title(f'Seasonal Temperature Profiles at Year {year+1}', fontsize=14)
+    plt.xlabel('Depth (m)', fontsize=12)
+    plt.ylabel('Temperature (°C)', fontsize=12)
+    plt.title('Seasonal Temperature Profiles', fontsize=14)
     plt.legend(fontsize=10)
     plt.grid(True, linestyle='--', alpha=0.7)
-    
-    # 设置坐标轴范围
-    plt.xlim(-3, 23)
-    plt.ylim(20, 0)
     
     plt.tight_layout()
     plt.savefig('seasonal_temperature_profiles.png', dpi=300)
     plt.show()
 
-def analyze_amplitude_phase(depth, T, year=9):
-    """
-    分析温度振幅衰减和相位延迟随深度的变化
-    
-    参数:
-        depth (ndarray): 深度数组
-        T (ndarray): 温度矩阵 [depth, time]
-        year (int): 分析的年份 (0-based)
-    """
-    # 计算时间步长
-    dt = (years * TAU) / (T.shape[1] - 1)
-    
-    # 提取指定年份的数据
-    start_idx = int(year * TAU / dt)
-    end_idx = int((year + 1) * TAU / dt)
-    T_year = T[:, start_idx:end_idx]
-    
-    # 计算每个深度的振幅和相位
-    amplitudes = np.zeros(len(depth))
-    phases = np.zeros(len(depth))
-    
-    for i in range(len(depth)):
-        # 获取该深度全年的温度变化
-        temp_series = T_year[i, :]
-        
-        # 计算振幅 (最大值与最小值的差的一半)
-        amplitudes[i] = (np.max(temp_series) - np.min(temp_series)) / 2
-        
-        # 计算相位延迟 (找到最大值出现的时间)
-        max_idx = np.argmax(temp_series)
-        phases[i] = max_idx * dt  # 转换为天数
-    
-    # 计算相位延迟（相对于地表）
-    phase_delay = phases - phases[0]
-    
-    # 绘制振幅衰减
-    plt.figure(figsize=(12, 5))
-    plt.subplot(1, 2, 1)
-    plt.plot(amplitudes, depth, 'b-', linewidth=2)
-    plt.gca().invert_yaxis()
-    plt.xlabel('Temperature Amplitude (°C)', fontsize=12)
-    plt.ylabel('Depth (m)', fontsize=12)
-    plt.title('Amplitude Attenuation with Depth', fontsize=14)
-    plt.grid(True, linestyle='--', alpha=0.7)
-    
-    # 绘制相位延迟
-    plt.subplot(1, 2, 2)
-    plt.plot(phase_delay, depth, 'r-', linewidth=2)
-    plt.gca().invert_yaxis()
-    plt.xlabel('Phase Delay (days)', fontsize=12)
-    plt.ylabel('Depth (m)', fontsize=12)
-    plt.title('Phase Delay with Depth', fontsize=14)
-    plt.grid(True, linestyle='--', alpha=0.7)
-    
-    plt.tight_layout()
-    plt.savefig('amplitude_phase_analysis.png', dpi=300)
-    plt.show()
-    
-    return amplitudes, phase_delay
-
 if __name__ == "__main__":
     # 运行模拟
-    years = 10
-    depth, T = solve_earth_crust_diffusion(h=0.1, r=0.1, years=years)
-    print(f"计算完成，温度场形状: {T.shape}")
+    depth, T = solve_earth_crust_diffusion()
+    print(f"计算完成，温度场形状: depth={len(depth)}, time={T.shape[1]}")
     
-    # 绘制四季温度轮廓
-    plot_seasonal_profiles(depth, T, year=9)  # 第10年
-    
-    # 分析振幅衰减和相位延迟
-    amplitudes, phase_delay = analyze_amplitude_phase(depth, T, year=9)
-    
-    # 输出关键深度处的分析结果
-    key_depths = [0, 2, 5, 10, 15, 20]
-    print("\n深度 | 温度振幅 (°C) | 相位延迟 (天)")
-    print("-----------------------------------")
-    for d in key_depths:
-        idx = np.argmin(np.abs(depth - d))
-        print(f"{depth[idx]:.1f} | {amplitudes[idx]:.3f} | {phase_delay[idx]:.2f}")
+    # 绘制季节性温度轮廓
+    plot_seasonal_profiles(depth, T)
